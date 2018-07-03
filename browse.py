@@ -1,5 +1,5 @@
 from __future__ import print_function
-import ROOT
+import ROOT, sys
 from ROOT import TChain
 from larcv import larcv
 import numpy as np
@@ -50,7 +50,6 @@ def show_event(entry=-1):
     ax1.set_title('Label',fontsize=20,fontname='Georgia',fontweight='bold')
     ax1.set_xlim(xlim)
     ax1.set_ylim(ylim)
-    plt.show()
     
     return (np.array(image2d), np.array(label2d))
 
@@ -64,7 +63,7 @@ def plot_best_fit(image_array):
 
     y = np.zeros((len(image_array), len(image_array[0])))
     for i in range(len(np.where(weights>0)[0])):
-	y[np.where(weights>0)[0][i]][np.where(weights>0)[1][i]] = np.where(weights>0)[0][i]
+        y[np.where(weights>0)[0][i]][np.where(weights>0)[1][i]] = np.where(weights>0)[0][i]
     y = y.reshape(size)
     x = np.array(range(len(image_array)) * len(image_array[0]))
     weights = weights.reshape((size))
@@ -73,35 +72,70 @@ def plot_best_fit(image_array):
     #plt.plot(x, b+m*x, '-')
     return b,m, angle
 # Let's look at one specific event entry
-ENTRY = 783
-image2d, label2d = show_event(ENTRY)
 
+def energy(ENTRY):
+    image2d, label2d = show_event(ENTRY)
+    unique_values, unique_counts = np.unique(label2d, return_counts=True)
+    print('Label values:',unique_values)
+    print('Label counts:',unique_counts)
+    categories = ['Background','Shower','Track']
+    fig, axes = plt.subplots(1, len(unique_values), figsize=(18,12), facecolor='w')
+    xlim,ylim = get_view_range(image2d)
 
-unique_values, unique_counts = np.unique(label2d, return_counts=True)
-print('Label values:',unique_values)
-print('Label counts:',unique_counts)
+    for index, value in enumerate(unique_values):
+        ax = axes[index]
+        mask = (label2d == value)
+        Image = image2d*mask
+        ax.imshow(Image, interpolation='none', cmap='jet', origin='lower')
+        print("Event", categories[index])
+        print("Energy: {0:.2f} MeV".format(np.sum((Image)/100)))
+        ax.set_title(categories[index],fontsize=20,fontname='Georgia',fontweight='bold')
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+        if index==1:
+            showerImage = np.array(Image)
+            b, m, angle=plot_best_fit(showerImage)
+            ax.set_title("{0} {1:.2f} deg".format(categories[index], angle),fontsize=20,fontname='Georgia',fontweight='bold')
+            print("Angle of the shower: {0:.2f}".format(angle))
+            print("Energy of the shower: {0:.2f} MeV".format(np.sum((Image)/100)))
+            shower_energy = np.sum(Image/100)
+            x = np.array(range(0,len(showerImage[0])))
+            y = x*m + b
+            ax.plot(x, y)
+    plt.show()
 
-categories = ['Background','Shower','Track']
+    particle_mcst_chain = TChain("particle_mcst_tree")
+    particle_mcst_chain.AddFile("data/test_10k.root")
+    particle_mcst_chain.GetEntry(ENTRY)
+    cpp_object = particle_mcst_chain.particle_mcst_branch
 
-fig, axes = plt.subplots(1, len(unique_values), figsize=(18,12), facecolor='w')
-xlim,ylim = get_view_range(image2d)
+    print('particle_mcst_tree contents:')
+    energy_deposit = 0
+    for particle in cpp_object.as_vector():
+        if abs(particle.pdg_code()) == 22 or abs(particle.pdg_code())==11:
+            energy_deposit += particle.energy_deposit()
+        print(particle.dump())
+    print("Energy Deposit: ", energy_deposit)
+    return energy_deposit, shower_energy
 
-for index, value in enumerate(unique_values):
-    ax = axes[index]
-    mask = (label2d == value)
-    Image = image2d*mask
-    ax.imshow(Image, interpolation='none', cmap='jet', origin='lower')
-    print("Event", categories[index])
-    print("{0:.2f} MeV".format(np.sum((Image)/100)))
-    ax.set_title(categories[index],fontsize=20,fontname='Georgia',fontweight='bold')
-    ax.set_xlim(xlim)
-    ax.set_ylim(ylim)
-    if index==1:
-       showerImage = np.array(Image)
-       b, m, angle=plot_best_fit(showerImage)
-       ax.set_title("{0} {1:.2f} deg".format(categories[index], angle),fontsize=20,fontname='Georgia',fontweight='bold')
-       print("Angle of the shower: {0:.2f}".format(angle))
-       x = np.array(range(0,len(showerImage[0])))
-       y = x*m + b
-       ax.plot(x, y)
-plt.show()
+if __name__ == "__main__":
+    #true = []
+    #calculated = []
+    for i in range(int(sys.argv[1]),int(sys.argv[2])):
+         energy(i)
+    #    deposit, shower = energy(i)
+    #    if deposit>0:
+    #        true.append(deposit)
+    #        calculated.append(shower)
+
+    #percent_array = []
+    #for i in range(len(true)):
+    #    percent_error = (abs(true[i] - calculated[i])/true[i]) * 100
+    #    if percent_error < 100:
+    #        percent_array.append(percent_error)
+    #plt.hist(percent_array, bins=30)
+    #plt.title("Error in Energy Prediction")
+    #plt.xlabel("Error")
+    #plt.ylabel("Frequency")
+    #plt.show()
+
