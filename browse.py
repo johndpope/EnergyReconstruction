@@ -5,6 +5,7 @@ from larcv import larcv
 import numpy as np
 from numpy.polynomial.polynomial import polyfit
 import matplotlib.pyplot as plt
+import math
 
 from larcv import larcv
 
@@ -67,11 +68,12 @@ def plot_best_fit(image_array):
     y = y.reshape(size)
     x = np.array(range(len(image_array)) * len(image_array[0]))
     weights = weights.reshape((size))
-    b,m = polyfit(x, y, 1, w=weights)
+    b, m = polyfit(x, y, 1, w=weights)
+    angle = math.atan(m) * 180/math.pi
     #plt.plot(x, b+m*x, '-')
-    return b,m
+    return b,m, angle
 # Let's look at one specific event entry
-ENTRY = 2
+ENTRY = 783
 image2d, label2d = show_event(ENTRY)
 
 
@@ -96,8 +98,9 @@ for index, value in enumerate(unique_values):
     ax.set_ylim(ylim)
     if index==1:
        showerImage = np.array(Image)
-       b,m=plot_best_fit(showerImage)
-       print(b,m)
+       b, m, angle=plot_best_fit(showerImage)
+       ax.set_title("{0} {1:.2f} deg".format(categories[index], angle),fontsize=20,fontname='Georgia',fontweight='bold')
+       print("Angle of the shower: {0:.2f}".format(angle))
        x = np.array(range(0,len(showerImage[0])))
        y = x*m + b
        ax.plot(x, y)
