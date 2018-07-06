@@ -58,7 +58,6 @@ def plot_best_fit(image_array):
     weights = np.array(image_array)
     x = np.where(weights>0)[1]
     y = np.where(weights>0)[0]
-    find_cluster(x, y)
     #plt.plot(x, y,'.')
     size = len(image_array) * len(image_array[0])
 
@@ -74,8 +73,8 @@ def plot_best_fit(image_array):
     return b,m, angle
 # Let's look at one specific event entry
 
-def energy(ENTRY, plane=0):
-    image2d, label2d = show_event(ENTRY, plane)
+def energy(event, plane=0):
+    image2d, label2d = show_event(event, plane)
     unique_values, unique_counts = np.unique(label2d, return_counts=True)
     #print('Label values:',unique_values)
     #print('Label counts:',unique_counts)
@@ -107,7 +106,7 @@ def energy(ENTRY, plane=0):
 
     particle_mcst_chain = TChain("particle_mcst_tree")
     particle_mcst_chain.AddFile("data/test_10k.root")
-    particle_mcst_chain.GetEntry(ENTRY)
+    particle_mcst_chain.GetEntry(event)
     cpp_object = particle_mcst_chain.particle_mcst_branch
 
     #print('particle_mcst_tree contents:')
@@ -196,7 +195,12 @@ def momentum(event, plane, plotLine):
 
     return angle, trueAngle, event
 
-def find_cluster(scatterX, scatterY):
+def find_cluster(event, plane):
+    image2d, label2d = show_event(event, plane)
+    unique_values, unique_counts = np.unique(label2d, return_counts=True)
+
+    scatterX = np.where(image2d>0)[1]
+    scatterY = np.where(image2d>0)[0]
     X = []
     for i,j in zip(scatterX, scatterY):
         X.append([i, j])
@@ -244,7 +248,7 @@ if __name__ == "__main__":
     #calculated = []
     #events = []
     for i in range(int(sys.argv[1]),int(sys.argv[2])):
-         energy(i, 0)
+         find_cluster(i, 0)
          #if singleParticle(i)[0]:
              #angle, trueAngle, event = momentum(i, 1, False)
              #true.append(trueAngle)
@@ -269,4 +273,3 @@ if __name__ == "__main__":
     #plt.xlabel("Percentage Error")
     #plt.ylabel("Frequency")
     #plt.show()
-
