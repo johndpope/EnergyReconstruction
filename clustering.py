@@ -198,9 +198,28 @@ def momentum(event, plane, plotLine):
 def find_cluster(event, plane):
     image2d, label2d = show_event(event, plane)
     unique_values, unique_counts = np.unique(label2d, return_counts=True)
+    categories = ['Background','Shower','Track']
+    if len(unique_values) != 3: return # some events don't have a track/shower :/
+    for index, value in enumerate(unique_values):
+        mask = (label2d == value)
+        Image = image2d*mask
+        if index==1:
+            showerImage = np.array(Image)
+        elif index==2:
+            trackImage = np.array(Image)
 
-    scatterX = np.where(image2d>0)[1]
-    scatterY = np.where(image2d>0)[0]
+    scatterX = np.where(showerImage>0)[1]
+    scatterY = np.where(showerImage>0)[0]
+    trackX = np.where(trackImage>0)[1]
+    trackY = np.where(trackImage>0)[0]
+##############################################################
+    track = []
+    for i,j in zip(trackX, trackY):
+        track.append([i,j])
+    model_t = DBSCAN(eps=8, min_samples=14).fit(track)
+    num_labels_t = np.unique(np.array(model_t.labels_))
+    t_labels_count = len(num_labels_t)
+###############################################################
     X = []
     for i,j in zip(scatterX, scatterY):
         X.append([i, j])
@@ -218,8 +237,12 @@ def find_cluster(event, plane):
         nrows = 3
         ncols = nimages/3 + 1
     plt.subplot(nrows, ncols, 1)
-    plt.plot(scatterX,scatterY,".")
-    plt.title("Original shower")
+    plt.plot(scatterX,scatterY,".",c="blue")
+    plt.plot(trackX,trackY,".",c="red")
+    plt.title("Original Event (Track: red; Shower: blue)")
+###############################################################
+    cluster_labels = {}
+###############################################################
     for counter, cluster in enumerate(num_labels):
         x_0 = []
         y_0 = []
@@ -235,13 +258,69 @@ def find_cluster(event, plane):
             x.append(i[0])
             y.append(i[1])
         plt.subplot(nrows, ncols, counter+2)
+################################################################
+        C = []
+        for i,j in zip(x, y):
+            C.append([i, j])
+        model_c = DBSCAN(eps=8, min_samples=14).fit(C)
+        num_labels_c = np.unique(np.array(model_c.labels_))
+        c_labels_count = len(num_labels_c)
+
+        T = []
+        for i,j in zip(x, y):
+            T.append([i,j])
+        for k,l in zip(trackX, trackY):
+            T.append([k,l])
+        model_tc = DBSCAN(eps=8, min_samples=14).fit(T)
+        num_labels_tc = np.unique(np.array(model_tc.labels_))
+        tc_labels_count = len(num_labels_tc)
+        cluster_labels[cluster] = (t_labels_count, c_labels_count, tc_labels_count)
+################################################################
         plt.plot(x,y,".")
+
         if cluster==-1:
             plt.title("Background Events")
         else:
             plt.title("Cluster " + str(cluster))
-    plt.show()
+################################################################
+    print("Only track labels        Only cluster labels           Track & Cluster labels")
+    print(cluster_labels)
 
+    count_tc = 0
+    clusters = []
+    cluster_count = []
+    for cluster_num, label in zip(cluster_labels.keys(), cluster_labels.values()):
+        if label[2] == 1:
+            count_tc += 1
+            clusters.append(cluster_num)
+    if count_tc == 1:
+        print("Cluster " + str(clusters[0]))
+    elif count_tc > 1:
+        for counter, cluster in enumerate(clusters):
+            x_0 = []
+            y_0 = []
+            x = []
+            y = []
+            for index, i in enumerate(model.labels_):
+                if i==cluster: x_0.append(index)
+
+            for index, i in enumerate(X):
+                if index in x_0: y_0.append(X[index])
+
+            for i in y_0:
+                x.append(i[0])
+                y.append(i[1])
+            cluster_count.append(len(x))
+        cluster_index = cluster_count.index(max(cluster_count))
+        print("Cluster " + str(clusters[cluster_index]))
+        #take the one with the most samples
+    else:
+        #min of the difference between tc_label and c_label
+        #if more than one:
+        #    take the one with most events
+        
+################################################################
+    plt.show()
 
 if __name__ == "__main__":
     #true = []
