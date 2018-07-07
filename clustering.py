@@ -7,7 +7,6 @@ from numpy.polynomial.polynomial import polyfit
 import matplotlib.pyplot as plt
 import math
 from sklearn.cluster import DBSCAN
-from larcv import larcv
 
 # A utility function to compute the 2D (X,Y) range to zoom-in so that it avoids showing zero region of an image.
 def get_view_range(image2d):
