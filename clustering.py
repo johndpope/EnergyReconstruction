@@ -318,7 +318,38 @@ def find_cluster(event, plane):
         #min of the difference between tc_label and c_label
         #if more than one:
         #    take the one with most events
-        
+        cluster_diff = {}
+        for cluster_num, label in zip(cluster_labels.keys(), cluster_labels.values()):
+            cluster_diff[cluster_num] = label[2] - label[1]
+        min_diff = min(cluster_diff.values())
+        if cluster_diff.values().count(min_diff) == 1:
+            for label, counts in cluster_diff.iteritems():
+                if counts == min_diff:
+                    print("Cluster ", label)
+        else:
+            min_clusters = []
+            for label, counts in cluster_diff.iteritems():
+                if counts == min_diff:
+                    min_clusters.append(label)
+            min_counts = []
+            for counter, cluster in enumerate(min_clusters):
+                x_0 = []
+                y_0 = []
+                x = []
+                y = []
+                for index, i in enumerate(model.labels_):
+                    if i==cluster: x_0.append(index)
+
+                for index, i in enumerate(X):
+                    if index in x_0: y_0.append(X[index])
+
+                for i in y_0:
+                    x.append(i[0])
+                    y.append(i[1])
+                min_counts.append(len(x))
+            cluster_index = min_counts.index(max(min_counts))
+            print("Cluster " + str(min_clusters[cluster_index]))
+
 ################################################################
     plt.show()
 
