@@ -49,7 +49,7 @@ def show_event(entry=-1, plane=0):
     #ax1.set_title('Label',fontsize=20,fontname='Georgia',fontweight='bold')
     #ax1.set_xlim(xlim)
     #ax1.set_ylim(ylim)
-    
+
     return (np.array(image2d), np.array(label2d))
 
 #the lines commented out should be included to see the scatter plot of the shower produced
@@ -294,6 +294,7 @@ def find_cluster(event, plane):
             clusters.append(cluster_num)
     if count_tc == 1:
         print("Cluster " + str(clusters[0]))
+        closest_cluster = clusters[0]
     elif count_tc > 1:
         for counter, cluster in enumerate(clusters):
             x_0 = []
@@ -312,6 +313,7 @@ def find_cluster(event, plane):
             cluster_count.append(len(x))
         cluster_index = cluster_count.index(max(cluster_count))
         print("Cluster " + str(clusters[cluster_index]))
+        closest_cluster = clusters[cluster_index]
         #take the one with the most samples
     else:
         #min of the difference between tc_label and c_label
@@ -325,6 +327,7 @@ def find_cluster(event, plane):
             for label, counts in cluster_diff.iteritems():
                 if counts == min_diff:
                     print("Cluster ", label)
+                    closest_cluster = label
         else:
             min_clusters = []
             for label, counts in cluster_diff.iteritems():
@@ -348,9 +351,25 @@ def find_cluster(event, plane):
                 min_counts.append(len(x))
             cluster_index = min_counts.index(max(min_counts))
             print("Cluster " + str(min_clusters[cluster_index]))
-
+            closest_cluster = min_clusters[cluster_index]
 ################################################################
     plt.show()
+    x_0 = []
+    y_0 = []
+    x = []
+    y = []
+    for index, i in enumerate(model.labels_):
+        if i==closest_cluster: x_0.append(index)
+    for index, i in enumerate(X):
+        if index in x_0: y_0.append(X[index])
+    for i in y_0:
+        x.append(i[0])
+        y.append(i[1])
+    plt.plot(x,y,".")
+    plt.plot(trackX, trackY, ".")
+    plt.show()
+
+#def find_vertex(trackPlot, showerPlot):
 
 if __name__ == "__main__":
     #true = []
