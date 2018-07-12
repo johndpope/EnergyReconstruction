@@ -7,6 +7,7 @@ from numpy.polynomial.polynomial import polyfit
 import matplotlib.pyplot as plt
 import math
 from sklearn.cluster import DBSCAN
+import subprocess, ast
 
 # A utility function to compute the 2D (X,Y) range to zoom-in so that it avoids showing zero region of an image.
 def get_view_range(image2d):
@@ -198,7 +199,8 @@ def find_cluster(event, plane):
     image2d, label2d = show_event(event, plane)
     unique_values, unique_counts = np.unique(label2d, return_counts=True)
     categories = ['Background','Shower','Track']
-    if len(unique_values) != 3: return # some events don't have a track/shower :/
+    if len(unique_values) != 3: return "x", "x", "x", "x" # some events don't have a track/shower :/
+    # returning something to check so that we don't get the error of iterating over NoneType object
     for index, value in enumerate(unique_values):
         mask = (label2d == value)
         Image = image2d*mask
@@ -365,18 +367,67 @@ def find_cluster(event, plane):
     for i in y_0:
         x.append(i[0])
         y.append(i[1])
-    plt.plot(x,y,".")
-    plt.plot(trackX, trackY, ".")
-    plt.show()
+    return list(trackX), list(trackY), x, y
 
-#def find_vertex(trackPlot, showerPlot):
+def find_vertex(trackPlotX, trackPlotY, showerPlotX, showerPlotY):
+    plt.plot(showerPlotX, showerPlotY, ".")
+    plt.plot(trackPlotX, trackPlotY, ".")
+    a = []
+    for i, j in zip(showerPlotX, showerPlotY):
+        a.append([i,j])
+    command = ["python", "plotPara.py", str(a)]
+    p = subprocess.Popen(command, stdout=subprocess.PIPE)
+    scatterData = p.stdout.read()
+    scatterData = ast.literal_eval(scatterData)
+    retcode = p.wait()
+    scatterX = []
+    scatterY = []
+    for scatter in scatterData:
+        scatterX.append(scatter[0])
+        scatterY.append(scatter[1])
+    plt.plot(scatterX, scatterY, "D", color="red")
+    distances = {}
+    for tPointX, tPointY in zip(trackPlotX, trackPlotY):
+        for cPointX, cPointY in zip(scatterX, scatterY):
+            distances[(tPointX, tPointY, cPointX, cPointY)] = math.sqrt((tPointX - cPointX)**2 + (tPointY - cPointY)**2)
+    minScatter = distances.values()
+    if distances.values().count(min(minScatter)) == 1:
+        for coord, dist in distances.iteritems():
+            if dist == min(minScatter):
+                print(coord, dist)
+                plt.plot(coord[2], coord[3], color="green", marker="v")
+    else:
+        smallestX = []
+        smallestY = []
+        for coord, dist in distances.iteritems():
+            if dist == min(minScatter):
+                smallestX.append(coord[2])
+                smallestY.append(coord[3])
+        trackXSum = 0
+        trackYSum = 0
+        for trackX, trackY in zip(trackPlotX, trackPlotY):
+            trackXSum += trackX
+            trackYSum += trackY
+        centerX = trackXSum/len(trackPlotX)
+        centerY = trackYSum/len(trackPlotY)
+        closestDistances = {}
+        for cPointX, cPointY in zip(smallestX, smallestY):
+            closestDistances[cPointX, cPointY] = math.sqrt((cPointX - centerX)**2 + (cPointY - centerY)**2)
+        min_distance = min(closestDistances.values())
+        for coord, dist in closestDistances.iteritems():
+            if dist == min_distance:
+                print(coord, dist)
+                plt.plot(coord[0], coord[1], color="black", marker="v")
+    plt.show()
 
 if __name__ == "__main__":
     #true = []
     #calculated = []
     #events = []
     for i in range(int(sys.argv[1]),int(sys.argv[2])):
-         find_cluster(i, 0)
+         trackX, trackY, x, y = find_cluster(i, 0)
+         if trackX != "x": # rememeber that some events don't have a shower/track
+             find_vertex(trackX, trackY, x, y)
          #if singleParticle(i)[0]:
              #angle, trueAngle, event = momentum(i, 1, False)
              #true.append(trueAngle)
