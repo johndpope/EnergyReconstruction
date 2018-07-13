@@ -58,7 +58,7 @@ def plot_best_fit(image_array):
     weights = np.array(image_array)
     x = np.where(weights>0)[1]
     y = np.where(weights>0)[0]
-    #plt.plot(x, y,'.')
+    plt.plot(x, y,'.')
     size = len(image_array) * len(image_array[0])
 
     y = np.zeros((len(image_array), len(image_array[0])))
@@ -69,7 +69,8 @@ def plot_best_fit(image_array):
     weights = weights.reshape((size))
     b, m = polyfit(x, y, 1, w=weights)
     angle = math.atan(m) * 180/math.pi
-    #plt.plot(x, b+m*x, '-')
+    plt.plot(x, b+m*x, '-')
+    plt.show()
     return b,m, angle
 # Let's look at one specific event entry
 
@@ -451,6 +452,7 @@ if __name__ == "__main__":
                 if index==1:
                     showerImage = np.array(Image)
             clusteredImage = get_weights(showerImage, events)
+            plot_best_fit(clusteredImage)
          #if singleParticle(i)[0]:
              #angle, trueAngle, event = momentum(i, 1, False)
              #true.append(trueAngle)
