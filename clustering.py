@@ -391,11 +391,13 @@ def find_vertex(trackPlotX, trackPlotY, showerPlotX, showerPlotY):
         for cPointX, cPointY in zip(scatterX, scatterY):
             distances[(tPointX, tPointY, cPointX, cPointY)] = math.sqrt((tPointX - cPointX)**2 + (tPointY - cPointY)**2)
     minScatter = distances.values()
+    vertex = []
     if distances.values().count(min(minScatter)) == 1:
         for coord, dist in distances.iteritems():
             if dist == min(minScatter):
                 print(coord, dist)
                 plt.plot(coord[2], coord[3], color="green", marker="v")
+                vertex.append([coord[2], coord[3]])
     else:
         smallestX = []
         smallestY = []
@@ -418,16 +420,37 @@ def find_vertex(trackPlotX, trackPlotY, showerPlotX, showerPlotY):
             if dist == min_distance:
                 print(coord, dist)
                 plt.plot(coord[0], coord[1], color="black", marker="v")
+                vertex.append([coord[0], coord[1]])
     plt.show()
+    return vertex
+
+def get_weights(image, events):
+    for y in range(len(image)):
+        for x in range(len(image[0])):
+            if [x, y] not in events:
+                image[y][x] = 0.
+    return image
 
 if __name__ == "__main__":
     #true = []
     #calculated = []
     #events = []
-    for i in range(int(sys.argv[1]),int(sys.argv[2])):
-         trackX, trackY, x, y = find_cluster(i, 0)
-         if trackX != "x": # rememeber that some events don't have a shower/track
-             find_vertex(trackX, trackY, x, y)
+    plane = 0
+    for entry in range(int(sys.argv[1]),int(sys.argv[2])):
+        trackX, trackY, x, y = find_cluster(entry, plane)
+        if trackX != "x": # rememeber that some events don't have a shower/track
+            vertex = find_vertex(trackX, trackY, x, y)
+            events = []
+            for i,j in zip(x, y):
+                events.append([i, j])
+            image2d, label2d = show_event(entry, plane)
+            unique_values, unique_counts = np.unique(label2d, return_counts=True)
+            for index, value in enumerate(unique_values):
+                mask = (label2d == value)
+                Image = image2d*mask
+                if index==1:
+                    showerImage = np.array(Image)
+            clusteredImage = get_weights(showerImage, events)
          #if singleParticle(i)[0]:
              #angle, trueAngle, event = momentum(i, 1, False)
              #true.append(trueAngle)
